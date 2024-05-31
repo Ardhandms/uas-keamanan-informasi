@@ -103,7 +103,8 @@
     <script>
       function encodeMessage() {
         const imageInput = document.getElementById("encodeImageInput").files[0];
-        const message = document.getElementById("encodeMessageInput").value;
+        const message =
+          document.getElementById("encodeMessageInput").value + "\0"; //
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
 
@@ -133,21 +134,19 @@
               .map((char) => char.charCodeAt(0).toString(2).padStart(8, "0"))
               .join("");
 
-            if (binaryMessage.length > data.length * 0.25) {
+            if (binaryMessage.length > data.length / 4) {
               alert("Message is too long to encode in this image.");
               return;
             }
 
-            const step = 4;
             let messageIndex = 0;
-            for (let i = 0; i < data.length; i += step) {
-              if (messageIndex < binaryMessage.length) {
-                const predictionError = data[i] - data[i + 1];
-                data[i] =
-                  (data[i] & 0xfe) | parseInt(binaryMessage[messageIndex++], 2);
-              } else {
-                break;
-              }
+            for (
+              let i = 0;
+              i < data.length && messageIndex < binaryMessage.length;
+              i += 4
+            ) {
+              data[i] =
+                (data[i] & 0xfe) | parseInt(binaryMessage[messageIndex++], 2);
             }
 
             ctx.putImageData(imageData, 0, 0);
@@ -192,17 +191,15 @@
             const data = imageData.data;
 
             let binaryMessage = "";
-            const step = 4; // Number of data points to process at once
-            for (let i = 0; i < data.length; i += step) {
-              const predictionError = data[i] - data[i + 1];
-              binaryMessage += (predictionError & 0x01).toString();
+            for (let i = 0; i < data.length; i += 4) {
+              binaryMessage += (data[i] & 0x01).toString();
             }
 
             const bytes = binaryMessage.match(/.{1,8}/g);
             let message = "";
             for (let i = 0; i < bytes.length; i++) {
               const charCode = parseInt(bytes[i], 2);
-              if (charCode === 0) break; // delimiter
+              if (charCode === 0) break;
               message += String.fromCharCode(charCode);
             }
 
